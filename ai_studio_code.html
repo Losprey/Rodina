@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>FamilyWeek Ultimate</title>
+
+<!-- Manifest pre PWA -->
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600;800&family=Playfair+Display:wght@700;900&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg:#080808; --surf:#121212; --surf2:#1c1c1c; --border:#262626;
+  --text:#FFF; --text2:#A0A0A0; --acc:#FD7E14; --baby:#00D2D3; --green:#2ECC71; --red:#FF4757;
+}
+[data-theme="light"] {
+  --bg:#FAF7F2; --surf:#FFFFFF; --surf2:#F0EDE8; --border:#E8E2D9;
+  --text:#2C2016; --text2:#7A6E65; --acc:#D4521A;
+}
+[data-theme="oled"] { --bg:#000000; --surf:#000000; --border:#111; }
+[data-theme="forest"] { --bg:#0a1a0a; --surf:#142614; --acc:#2ecc71; --border:#1e3d1e; }
+
+* { margin:0; padding:0; box-sizing:border-box; font-family:'Outfit', sans-serif; -webkit-tap-highlight-color:transparent; transition: 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
+body { background:var(--bg); color:var(--text); max-width:480px; margin:0 auto; min-height:100vh; padding-bottom:110px; overflow-x:hidden; }
+h1, h2, h3 { font-family:'Playfair Display', serif; }
+
+/* --- ONBOARDING --- */
+#onboarding { position:fixed; inset:0; background:var(--bg); z-index:10000; display:none; flex-direction:column; padding:40px 30px; overflow-y:auto; }
+.ob-step { display:none; animation:fadeIn 0.5s ease; }
+.ob-step.active { display:block; }
+.pantry-grid { display:grid; grid-template-columns: 1fr 1fr; gap:10px; margin:20px 0; }
+.pantry-chip { padding:14px; border-radius:18px; background:var(--surf2); border:1px solid var(--border); text-align:center; font-size:14px; cursor:pointer; }
+.pantry-chip.selected { background:var(--acc); border-color:var(--acc); color:white; }
+
+/* --- TUTORIAL --- */
+#tut-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.9); z-index:20000; display:none; }
+.tut-bubble { position:absolute; background:var(--acc); color:white; padding:25px; border-radius:28px; width:300px; box-shadow: 0 15px 40px rgba(0,0,0,0.6); z-index:20001; left:50%; transform:translateX(-50%); }
+
+/* --- UI COMPONENTS --- */
+.card { background:var(--surf); border-radius:28px; padding:20px; margin:10px 15px; border:1px solid var(--border); }
+.card-label { font-size:10px; font-weight:800; text-transform:uppercase; color:var(--text2); margin-bottom:8px; display:block; letter-spacing:1px; }
+
+/* --- BUDGET --- */
+.budget-bar { height:8px; background:var(--border); border-radius:10px; overflow:hidden; margin:10px 0; }
+.budget-fill { height:100%; background:var(--green); width:0%; transition:1.2s ease-in-out; }
+
+/* --- PLANNER --- */
+.day-card { background:var(--surf); border-radius:24px; margin:10px 15px; border:1px solid var(--border); overflow:hidden; }
+.day-card.today { border-color:var(--acc); background: linear-gradient(180deg, var(--surf) 0%, rgba(253,126,20,0.05) 100%); }
+.day-header { padding:18px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; }
+.day-body { padding:0 18px 18px; display:none; border-top:1px solid var(--border); }
+.day-card.open .day-body { display:block; }
+.meal-slot { padding:14px; background:var(--surf2); border-radius:18px; display:flex; justify-content:space-between; align-items:center; margin-top:8px; cursor:pointer; }
+
+/* --- SETTINGS SPECIFIC --- */
+.notif-row { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid var(--border); }
+.switch { position:relative; display:inline-block; width:46px; height:24px; }
+.switch input { opacity:0; width:0; height:0; }
+.slider { position:absolute; cursor:pointer; inset:0; background-color:#333; transition:.3s; border-radius:34px; }
+.slider:before { position:absolute; content:""; height:18px; width:18px; left:3px; bottom:3px; background-color:white; transition:.3s; border-radius:50%; }
+input:checked + .slider { background-color:var(--acc); }
+input:checked + .slider:before { transform:translateX(22px); }
+
+/* --- NAVIGÁCIA --- */
+.nav { position:fixed; bottom:0; left:50%; transform:translateX(-50%); width:100%; max-width:480px; background:rgba(15,15,15,0.9); backdrop-filter:blur(20px); display:flex; justify-content:space-around; padding:10px 0 35px; border-top:1px solid var(--border); z-index:1000; }
+.nav-btn { background:none; border:none; color:#555; font-size:10px; font-weight:700; display:flex; flex-direction:column; align-items:center; gap:6px; flex:1; cursor:pointer; }
+.nav-btn.active { color:var(--acc); }
+
+/* --- FORMS & BUTTONS --- */
+.btn-main { width:100%; padding:18px; border-radius:20px; border:none; font-weight:800; font-size:16px; cursor:pointer; background:var(--acc); color:white; margin-top:10px; }
+.btn-mini { padding:8px 15px; border-radius:12px; background:var(--surf2); border:1px solid var(--border); color:var(--text); font-size:11px; font-weight:700; cursor:pointer; }
+input, select { width:100%; padding:15px; border-radius:15px; background:var(--surf2); border:1px solid var(--border); color:white; margin-top:8px; font-size:16px; outline:none; }
+
+.screen { display:none; animation:fadeIn 0.3s ease; }
+.screen.active { display:block; }
+@keyframes fadeIn { from { opacity:0; transform:translateY(10px); } to { opacity:1; } }
+</style>
+</head>
+<body>
+
+<!-- 1. ONBOARDING -->
+<div id="onboarding">
+    <div id="ob-1" class="ob-step active">
+        <h1 style="font-size:48px; color:var(--acc); margin-bottom:10px;">FamilyWeek</h1>
+        <h2 style="font-size:28px; margin-bottom:15px;">Upratite si rodinný život.</h2>
+        <input type="text" id="ob-name" placeholder="Meno vašej rodiny">
+        <button class="btn-main" onclick="obGo(2)">Pokračovať →</button>
+    </div>
+    <div id="ob-2" class="ob-step">
+        <h2>Čo už máte doma?</h2>
+        <p style="color:var(--text2);">Tieto veci nebudeme pridávať na nákup.</p>
+        <div class="pantry-grid" id="ob-pantry-grid"></div>
+        <button class="btn-main" onclick="obFinish()">Dokončiť nastavenie</button>
+    </div>
+</div>
+
+<!-- 2. TUTORIAL -->
+<div id="tut-overlay">
+    <div id="tut-bubble" class="tut-bubble">
+        <h3 id="tut-title">Nadpis</h3>
+        <p id="tut-text" style="margin:10px 0 20px; font-size:14px; opacity:0.9;">Text...</p>
+        <button onclick="nextTutStep()" class="btn-main" style="background:white; color:var(--acc); padding:12px;">ĎALEJ</button>
+    </div>
+</div>
+
+<!-- 3. HLAVNÁ APP HEADER -->
+<header class="app-header">
+    <div>
+        <small id="txt-date-top" style="color:var(--text2); font-weight:800; text-transform:uppercase; font-size:10px;"></small>
+        <h2 id="txt-family-name">FamilyWeek</h2>
+    </div>
+    <button onclick="tab('settings')" style="width:40px; height:40px; border-radius:50%; background:var(--surf2); border:1px solid var(--border); cursor:pointer;">⚙️</button>
+</header>
+
+<!-- SCREEN: DASHBOARD -->
+<div id="scr-dash" class="screen active">
+    <div class="card" id="card-budget">
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-weight:800; font-size:11px; color:var(--text2);">ROZPOČET</span>
+            <span id="budget-num" style="font-weight:800; color:var(--green);">0 / 400 €</span>
+        </div>
+        <div class="budget-bar"><div id="budget-fill" class="budget-fill"></div></div>
+        <button class="btn-mini" style="width:100%; margin-top:10px;" onclick="addExpense()">+ PRIDAŤ VÝDAVOK</button>
+    </div>
+
+    <div class="card" onclick="tab('planner')">
+        <small class="card-label">Dnes na obed 🍲</small>
+        <h2 id="dash-today-meal" style="margin-top:5px; color:var(--acc);">Nič nenaplánované</h2>
+        <p id="defrost-warn" style="color:var(--red); font-size:12px; margin-top:8px; display:none; font-weight:bold;">❄️ Vyberte suroviny z mrazničky!</p>
+    </div>
+
+    <div class="card">
+        <h3 style="font-size:16px; margin-bottom:12px;">Úlohy</h3>
+        <div id="dash-tasks"></div>
+        <input type="text" id="task-inp" placeholder="+ Pridať úlohu..." style="border:none; background:none; padding:10px 0; color:white;" onkeydown="if(event.key==='Enter')addTask(this.value)">
+    </div>
+</div>
+
+<!-- SCREEN: PLANNER -->
+<div id="scr-planner" class="screen">
+    <div style="display:flex; gap:10px; padding:0 15px 15px;">
+        <button id="btn-mode-r" class="btn-mini" style="flex:1; padding:12px; background:var(--acc); border:none;" onclick="setMode('rodina')">RODINA</button>
+        <button id="btn-mode-b" class="btn-mini" style="flex:1; padding:12px;" onclick="setMode('baby')">BÁBÄTKO</button>
+    </div>
+    <div id="planner-container"></div>
+</div>
+
+<!-- SCREEN: SHOPPING -->
+<div id="scr-shop" class="screen">
+    <div style="padding:0 20px 10px; display:flex; justify-content:space-between; align-items:center;">
+        <h2>Nákup</h2>
+        <button class="btn-mini" onclick="shareWA()">WHATSAPP</button>
+    </div>
+    <div id="shop-list-container"></div>
+</div>
+
+<!-- SCREEN: SETTINGS (Všetko v jednom) -->
+<div id="scr-settings" class="screen">
+    <div class="card">
+        <small class="card-label">🏠 RODINA</small>
+        <input type="text" id="set-name" placeholder="Meno rodiny" onchange="updateSet()">
+        <div style="margin-top:15px; padding:15px; background:var(--surf2); border-radius:15px; text-align:center;">
+            <small style="color:var(--text2); display:block; margin-bottom:5px;">VÁŠ SYNC KÓD</small>
+            <b id="display-sync-id" style="letter-spacing:2px; color:var(--acc); font-size:20px;">---</b>
+        </div>
+    </div>
+
+    <div class="card">
+        <small class="card-label">🔔 UPOZORNENIA</small>
+        <div class="notif-row"><span>Ranný plán (8:00)</span><label class="switch"><input type="checkbox" id="cfg-morning" onchange="updateSet()"><span class="slider"></span></label></div>
+        <div class="notif-row"><span>Mraznička (20:00)</span><label class="switch"><input type="checkbox" id="cfg-defrost" onchange="updateSet()"><span class="slider"></span></label></div>
+    </div>
+
+    <div class="card">
+        <small class="card-label">🎨 VZHĽAD</small>
+        <select id="set-theme" onchange="updateSet()">
+            <option value="dark">Tmavá (Klasik)</option>
+            <option value="oled">OLED (Čierna)</option>
+            <option value="light">Svetlá</option>
+            <option value="forest">Lesná zelená</option>
+        </select>
+    </div>
+
+    <div class="card">
+        <small class="card-label">💰 ROZPOČET</small>
+        <input type="number" id="limit-input" placeholder="Mesačný limit v €" onchange="updateSet()">
+    </div>
+
+    <div style="padding: 0 15px;">
+        <button class="btn-main" onclick="startTutorial(true)" style="background:var(--surf2); color:white;">SPUSTIŤ TUTORIÁL</button>
+        <button class="btn-main" style="background:none; color:var(--red); font-size:13px;" onclick="hardReset()">ZMAZAŤ VŠETKY DÁTA</button>
+    </div>
+</div>
+
+<!-- PICKER MODAL -->
+<div id="modal" class="modal">
+    <div class="sheet">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
+            <h2>Čo budeme variť?</h2>
+            <button onclick="closeModal()" style="font-size:24px; color:white; background:none; border:none;">✕</button>
+        </div>
+        <input type="text" id="m-search" placeholder="Hľadať recept..." oninput="filterMeals()">
+        <div id="m-results" style="margin-top:20px;"></div>
+    </div>
+</div>
+
+<!-- NAVIGÁCIA -->
+<nav class="nav" id="main-nav">
+    <button class="nav-btn active" id="nav-dash" onclick="tab('dash', this)">🏠<br>DOMOV</button>
+    <button class="nav-btn" id="nav-plan" onclick="tab('planner', this)">📅<br>PLÁN</button>
+    <button class="nav-btn" id="nav-shop" onclick="tab('shop', this)">🛒<br>NÁKUP</button>
+</nav>
+
+<script>
+/* 
+   ==========================================================================
+   GIGANTICKÁ DATABÁZA JEDÁL (Miesto pre tvojich 6000 riadkov)
+   ==========================================================================
+*/
+const MEAL_DB = [
+    {n: "Pečené kura", i: [{n:"kura",c:"Mäso"},{n:"ryža",c:"Trvanlivé"}], d:true},
+    {n: "Cestoviny Bolognese", i: [{n:"mleté mäso",c:"Mäso"},{n:"cestoviny",c:"Trvanlivé"},{n:"paradajky",c:"Zelenina"}], d:true},
+    {n: "Rizoto s hubami", i: [{n:"ryža",c:"Trvanlivé"},{n:"šampiňóny",c:"Zelenina"},{n:"smotana",c:"Mliečne"}], d:false},
+    {n: "Morčacie s batátom", i: [{n:"morka",c:"Mäso"},{n:"batát",c:"Zelenina"}], d:true, baby:true}
+];
+
+let S = JSON.parse(localStorage.getItem('fw_master_final')) || {
+    user: "", pantry: [], planR: {}, planB: {}, tasks: [], budget: 0, budgetLimit: 400, mode: "rodina", tutDone: false, theme: "dark", notifs: {morning: true, defrost: true}
+};
+
+/* --- INICIALIZÁCIA --- */
+function init() {
+    if(!S.user) {
+        document.getElementById('onboarding').style.display = 'flex';
+        const BASICS = ["Olej", "Múka", "Ryža", "Cukor", "Soľ", "Káva", "Mlieko", "Vajíčka", "Maslo", "Cibuľa"];
+        document.getElementById('ob-pantry-grid').innerHTML = BASICS.map(item => `<div class="pantry-chip" onclick="this.classList.toggle('selected')">${item}</div>`).join('');
+    } else {
+        document.getElementById('onboarding').style.display = 'none';
+        document.getElementById('txt-family-name').innerText = S.user;
+        document.getElementById('display-sync-id').innerText = S.user.substring(0,3).toUpperCase() + "-" + Math.floor(1000+Math.random()*9000);
+        
+        // Sync Settings UI
+        document.getElementById('set-name').value = S.user;
+        document.getElementById('limit-input').value = S.budgetLimit;
+        document.getElementById('set-theme').value = S.theme;
+        document.getElementById('cfg-morning').checked = S.notifs.morning;
+        document.getElementById('cfg-defrost').checked = S.notifs.defrost;
+        
+        updateTheme(S.theme);
+        updateDash();
+        if(!S.tutDone) setTimeout(() => startTutorial(), 1000);
+    }
+}
+
+/* --- ONBOARDING FUNKCIE --- */
+function obGo(n) { if(n===2 && !document.getElementById('ob-name').value) return; document.querySelectorAll('.ob-step').forEach(s=>s.classList.remove('active')); document.getElementById('ob-'+n).classList.add('active'); }
+function obFinish() {
+    S.user = document.getElementById('ob-name').value;
+    document.querySelectorAll('.pantry-chip.selected').forEach(el=>S.pantry.push(el.innerText.toLowerCase()));
+    save(); init();
+}
+
+/* --- DASHBOARD FUNKCIE --- */
+function updateDash() {
+    const pct = (S.budget / S.budgetLimit) * 100;
+    document.getElementById('budget-fill').style.width = Math.min(pct, 100) + '%';
+    document.getElementById('budget-num').innerText = `${S.budget.toFixed(2)} / ${S.budgetLimit} €`;
+    document.getElementById('budget-fill').style.background = pct > 90 ? 'var(--red)' : (pct > 70 ? 'var(--acc)' : 'var(--green)');
+
+    const now = new Date();
+    document.getElementById('txt-date-top').innerText = `${['Nedeľa','Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota'][now.getDay()]}, ${now.getDate()}. MARCA`;
+    
+    const dayKey = ((now.getDay() + 6) % 7) + '_Obed';
+    document.getElementById('dash-today-meal').innerText = S.planR[dayKey] || "Zvoľ si obed";
+
+    const tomorrowKey = ((now.getDay() + 7) % 7) + '_Obed';
+    const tomorrowMeal = MEAL_DB.find(m => m.n === S.planR[tomorrowKey]);
+    document.getElementById('defrost-warn').style.display = (tomorrowMeal && tomorrowMeal.d) ? 'block' : 'none';
+
+    renderTasks();
+}
+
+/* --- PLANNER FUNKCIE --- */
+let curD;
+function renderPlanner() {
+    const cont = document.getElementById('planner-container'); cont.innerHTML = '';
+    const days = ['Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota','Nedeľa'];
+    const todayIdx = (new Date().getDay() + 6) % 7;
+    days.forEach((d, i) => {
+        const meal = (S.mode === 'rodina' ? S.planR : S.planB)[i + '_Obed'] || 'Zvoliť obed...';
+        cont.innerHTML += `<div class="day-card ${i===todayIdx?'today open':''}" id="day-${i}"><div class="day-header" onclick="toggleDay(${i})"><span><b>${d}</b></span><span style="color:var(--acc); font-weight:800;">${meal}</span></div><div class="day-body"><div class="meal-slot" onclick="openPicker(${i})">🍲 Obed <span>ZMENIŤ</span></div><button class="btn-mini" style="width:100%; margin-top:10px;" onclick="swapWithTomorrow(${i})">🔄 VYMENIŤ SO ZAJTRAJKOM</button></div></div>`;
+    });
+}
+function toggleDay(i) { document.querySelectorAll('.day-card').forEach((c,idx) => { if(idx!==i) c.classList.remove('open'); }); document.getElementById('day-'+i).classList.toggle('open'); }
+function openPicker(d) { curD = d; document.getElementById('modal').style.display = 'flex'; filterMeals(); }
+function closeModal() { document.getElementById('modal').style.display = 'none'; }
+function filterMeals() {
+    const q = document.getElementById('m-search').value.toLowerCase();
+    document.getElementById('m-results').innerHTML = MEAL_DB.filter(m => m.n.toLowerCase().includes(q) && (S.mode === 'baby' ? m.baby : !m.baby)).map(m => `<div class="card" onclick="selectMeal('${m.n}')"><b>${m.n}</b><br><small style="color:var(--text2)">Suroviny: ${m.i.map(x=>x.n).join(', ')}</small><div style="margin-top:10px;"><button class="btn-mini" onclick="event.stopPropagation(); selectMeal('${m.n}', true)">NA 2 DNI</button></div></div>`).join('');
+}
+function selectMeal(n, twoDays=false) {
+    const plan = S.mode === 'rodina' ? S.planR : S.planB;
+    plan[curD+'_Obed'] = n;
+    if(twoDays) plan[((curD+1)%7)+'_Obed'] = n + " (zvyšok)";
+    save(); closeModal(); renderPlanner(); updateDash();
+}
+function swapWithTomorrow(i) {
+    const plan = S.mode === 'rodina' ? S.planR : S.planB;
+    const nxt = (i + 1) % 7;
+    const temp = plan[i+'_Obed'];
+    plan[i+'_Obed'] = plan[nxt+'_Obed'];
+    plan[nxt+'_Obed'] = temp;
+    save(); renderPlanner(); updateDash();
+}
+
+/* --- SHOPPING FUNKCIE --- */
+function renderShop() {
+    const cont = document.getElementById('shop-list-container'); cont.innerHTML = '';
+    let needed = {};
+    Object.values(S.planR).forEach(name => {
+        if(name.includes("(zvyšok)")) return;
+        const recipe = MEAL_DB.find(m => m.n === name);
+        if(recipe) recipe.i.forEach(ing => {
+            if(!S.pantry.includes(ing.n.toLowerCase())) {
+                if(!needed[ing.c]) needed[ing.c] = [];
+                if(!needed[ing.c].includes(ing.n)) needed[ing.c].push(ing.n);
+            }
+        });
+    });
+    for(let cat in needed) {
+        cont.innerHTML += `<div style="color:var(--acc); font-size:11px; font-weight:800; margin:15px 20px 5px;">${cat.toUpperCase()}</div>`;
+        needed[cat].forEach(item => { cont.innerHTML += `<div class="card" style="margin:5px 15px; padding:15px; display:flex; gap:12px; align-items:center;"><input type="checkbox" style="width:22px;"><span>${item}</span></div>`; });
+    }
+}
+
+/* --- TASKS --- */
+function addTask(v) { if(!v) return; S.tasks.push({id:Date.now(), t:v, d:false}); document.getElementById('task-inp').value=''; save(); renderTasks(); }
+function renderTasks() {
+    document.getElementById('dash-tasks').innerHTML = S.tasks.filter(t => !t.d).map(t => `<div style="display:flex; align-items:center; gap:10px; padding:10px 0;" onclick="const task=S.tasks.find(x=>x.id===${t.id}); task.d=true; save(); renderTasks();"><div style="width:20px; height:20px; border-radius:6px; border:2px solid var(--border);"></div><span>${t.t}</span></div>`).join('');
+}
+
+/* --- TUTORIAL --- */
+let tutStep = 0;
+const tSteps = [{id:'card-budget', t:'Mesačný rozpočet', p:'Tu sleduješ výdavky.'}, {id:'nav-plan', t:'Plánovač', p:'Naplánuj si týždeň.'}];
+function startTutorial(force=false) { if(S.tutDone && !force) return; document.getElementById('tut-overlay').style.display='block'; nextTutStep(); }
+function nextTutStep() {
+    if(tutStep >= tSteps.length) { document.getElementById('tut-overlay').style.display='none'; S.tutDone=true; save(); return; }
+    const s = tSteps[tutStep];
+    document.getElementById('tut-title').innerText = s.t;
+    document.getElementById('tut-text').innerText = s.p;
+    const rect = document.getElementById(s.id).getBoundingClientRect();
+    document.getElementById('tut-bubble').style.top = (rect.top < 300) ? (rect.bottom + 20) + 'px' : (rect.top - 200) + 'px';
+    tutStep++;
+}
+
+/* --- CORE SYSTEM --- */
+function save() { localStorage.setItem('fw_master_final', JSON.stringify(S)); }
+function updateSet() {
+    S.user = document.getElementById('set-name').value;
+    S.budgetLimit = parseFloat(document.getElementById('limit-input').value);
+    S.theme = document.getElementById('set-theme').value;
+    S.notifs.morning = document.getElementById('cfg-morning').checked;
+    S.notifs.defrost = document.getElementById('cfg-defrost').checked;
+    updateTheme(S.theme); save(); init();
+}
+function updateTheme(v) { document.body.setAttribute('data-theme', v); }
+function tab(id, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('scr-'+id).classList.add('active');
+    document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
+    if(btn) btn.classList.add('active');
+    if(id==='planner') renderPlanner();
+    if(id==='shop') renderShop();
+}
+function addExpense() { const a=prompt("Suma v €:"); if(a) { S.budget += parseFloat(a); save(); updateDash(); } }
+function shareWA() {
+    let t = "*NÁŠ NÁKUP 🛒*\n\n";
+    document.querySelectorAll('#shop-list-container span').forEach(s => t += "• " + s.innerText + "\n");
+    window.open("whatsapp://send?text=" + encodeURIComponent(t));
+}
+function hardReset() { if(confirm("Naozaj resetovať?")) { localStorage.clear(); location.reload(); } }
+
+window.onload = init;
+</script>
+</body>
+</html>
