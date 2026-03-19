@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="sk">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>FamilyWeek Pro</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Playfair+Display:ital,wght@0,700;0,900;1,700&display=swap" rel="stylesheet">
+
+<style>
+:root {
+  --bg: #0C0C0E; --surface: rgba(28, 28, 30, 0.7); --surface-solid: #1C1C1E; --border: rgba(255, 255, 255, 0.08);
+  --text: #FFFFFF; --text-dim: #A1A1AA; --acc: #FF6B35; --green: #34C759; --red: #FF3B30;
+  --radius: 20px; --base-fs: 15px;
+}
+[data-theme="light"] { --bg: #F2F2F7; --surface: rgba(255, 255, 255, 0.7); --surface-solid: #FFFFFF; --border: rgba(0, 0, 0, 0.08); --text: #1C1C1E; --text-dim: #636366; }
+
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Outfit', sans-serif; -webkit-tap-highlight-color: transparent; }
+html { font-size: var(--base-fs); }
+body { background-color: var(--bg); color: var(--text); max-width: 480px; margin: 0 auto; min-height: 100vh; padding-bottom: 100px; transition: all 0.3s ease; overflow-x: hidden; }
+
+.glass { background: var(--surface); backdrop-filter: blur(15px); -webkit-backdrop-filter: blur(15px); border: 1px solid var(--border); }
+h1, h2, .serif { font-family: 'Playfair Display', serif; font-weight: 800; }
+
+/* --- UI ELEMENTS --- */
+.screen { display: none; animation: fadeIn 0.4s ease; padding: 1rem; }
+.screen.active { display: block; }
+@keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+.card { background: var(--surface-solid); border-radius: var(--radius); padding: 1rem; margin-bottom: 0.8rem; border: 1px solid var(--border); }
+.hero-card { background: linear-gradient(135deg, var(--acc), #B03A2E); border: none; color: white; }
+
+.row-item { background: var(--surface-solid); padding: 0.8rem 1rem; border-radius: 15px; margin-bottom: 0.4rem; display: flex; justify-content: space-between; align-items: center; border: 1px solid var(--border); }
+.section-title { font-size: 0.7rem; font-weight: 800; text-transform: uppercase; color: var(--text-dim); margin: 1.2rem 0 0.5rem 0.5rem; letter-spacing: 1px; }
+
+/* --- PLANNER ACCORDION --- */
+.day-card { background: var(--surface-solid); border-radius: 18px; margin-bottom: 0.6rem; border: 1px solid var(--border); overflow: hidden; }
+.day-card.open { border-color: var(--acc); background: rgba(255,255,255,0.03); }
+.day-header { padding: 0.8rem 1rem; display: flex; justify-content: space-between; align-items: center; cursor: pointer; }
+.day-body { display: none; padding: 0 1rem 1rem; border-top: 1px solid var(--border); }
+.open .day-body { display: block; }
+.meal-row { display: flex; justify-content: space-between; align-items: center; padding: 0.7rem 0; border-bottom: 1px solid var(--border); cursor: pointer; }
+
+/* --- BUTTONS --- */
+.btn-pill { background: var(--acc); color: white; border: none; padding: 0.8rem 1.5rem; border-radius: 15px; font-weight: 700; cursor: pointer; text-align: center; width: 100%; display: block; }
+.btn-mini { padding: 6px 12px; border-radius: 10px; background: var(--bg); border: 1px solid var(--border); color: var(--text); font-size: 0.7rem; font-weight: 700; cursor: pointer; }
+
+/* --- NAV --- */
+.nav-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: 92%; height: 60px; border-radius: 20px; display: flex; justify-content: space-around; align-items: center; z-index: 2000; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+.nav-item { display: flex; flex-direction: column; align-items: center; color: var(--text-dim); text-decoration: none; font-size: 0.65rem; font-weight: 700; flex: 1; }
+.nav-item.active { color: var(--acc); }
+.nav-item i { font-size: 1.3rem; font-style: normal; margin-bottom: 2px; }
+
+/* --- MODALS --- */
+.modal { position: fixed; inset: 0; background: rgba(0,0,0,0.85); z-index: 3000; display: none; align-items: center; justify-content: center; padding: 2rem; }
+.modal-content { background: var(--surface-solid); width: 100%; border-radius: 25px; padding: 1.5rem; border: 1px solid var(--border); max-height: 80vh; overflow-y: auto; }
+
+#onboarding { position: fixed; inset: 0; background: var(--bg); z-index: 5000; display: none; flex-direction: column; padding: 2.5rem; justify-content: center; text-align: center; }
+input[type="text"], input[type="number"] { width: 100%; padding: 12px; border-radius: 12px; background: var(--bg); border: 1px solid var(--border); color: white; margin-bottom: 10px; outline: none; }
+</style>
+</head>
+<body>
+
+<!-- ONBOARDING -->
+<div id="onboarding">
+    <h1 style="font-size: 3rem;">Family<span style="color:var(--acc)">Week</span></h1>
+    <p style="color: var(--text-dim); margin-bottom: 2rem;">Váš inteligentný rodinný pomocník.</p>
+    <input type="text" id="ob-name" placeholder="Meno rodiny">
+    <button class="btn-pill" onclick="finishOnboarding()">ZAČAŤ →</button>
+</div>
+
+<!-- HEADER -->
+<header style="padding: 1.2rem 1.5rem; display: flex; justify-content: space-between; align-items: center;">
+    <div class="serif" style="font-size: 1.4rem;">F<span style="color:var(--acc)">W</span></div>
+    <div style="font-size: 0.6rem; font-weight: 800; color: var(--green);">● AKTÍVNE</div>
+</header>
+
+<!-- SCREEN: DASHBOARD -->
+<div id="scr-dash" class="screen active">
+    <div class="card hero-card">
+        <small id="txt-date" style="opacity: 0.8; font-weight: 700; text-transform: uppercase; font-size: 0.6rem;"></small>
+        <h2 id="txt-welcome" style="margin: 0.2rem 0 0.8rem;">Ahojte!</h2>
+        <div class="glass" style="padding: 0.8rem; border-radius: 15px; border: none;">
+            <small style="font-size: 0.55rem; font-weight: 800; opacity: 0.8; text-transform: uppercase;">Práve teraz 🍲</small>
+            <div id="dash-meal" style="font-size: 1rem; font-weight: 700; margin-top: 2px;">Načítavam...</div>
+        </div>
+    </div>
+
+    <div style="display: grid; grid-template-columns: 1.2fr 1fr; gap: 0.6rem;">
+        <div class="card" style="margin:0;">
+            <small class="section-title" style="margin:0; font-size: 0.55rem;">ROZPOČET</small>
+            <div id="dash-budget" style="font-size: 1rem; font-weight: 800; margin: 4px 0;">0€ / 400€</div>
+            <div style="height:3px; background: var(--border); border-radius:2px;"><div id="budget-fill" style="height:100%; background: var(--green); width: 0%;"></div></div>
+            <button class="btn-mini" style="width:100%; margin-top:10px; border:none; background:rgba(255,255,255,0.1);" onclick="addExpense()">+ PRIDAŤ</button>
+        </div>
+        <div class="card" style="margin:0; display:flex; flex-direction:column; justify-content:center; align-items:center; gap:5px;" onclick="tab('planner')">
+            <span style="font-size: 1.2rem;">📅</span>
+            <small style="font-weight: 700; font-size: 0.6rem; color:var(--text-dim);">PLÁN</small>
+        </div>
+    </div>
+
+    <p class="section-title">Úlohy</p>
+    <div id="dash-tasks"></div>
+</div>
+
+<!-- SCREEN: PLÁNOVAČ -->
+<div id="scr-planner" class="screen">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 1rem;">
+        <h2 class="serif">Plánovač</h2>
+        <div class="glass" style="display:flex; padding: 3px; border-radius: 10px;">
+            <button id="m-rodina" onclick="setMode('rodina')" style="padding: 5px 12px; border-radius: 8px; border:none; background:var(--acc); color:white; font-size:0.65rem; font-weight:700; cursor:pointer;">RODINA</button>
+            <button id="m-baby" onclick="setMode('baby')" style="padding: 5px 12px; border-radius: 8px; border:none; background:none; color:var(--text-dim); font-size:0.65rem; font-weight:700; cursor:pointer;">BABY</button>
+        </div>
+    </div>
+    <div id="planner-list"></div>
+</div>
+
+<!-- SCREEN: NÁKUP -->
+<div id="scr-shop" class="screen">
+    <h2 class="serif" style="margin-bottom: 1rem;">Nákup</h2>
+    <div id="shop-container"></div>
+</div>
+
+<!-- SCREEN: NASTAVENIA -->
+<div id="scr-settings" class="screen">
+    <h2 class="serif" style="margin-bottom: 1.5rem;">Nastavenia</h2>
+    <div class="card">
+        <p class="section-title" style="margin:0 0 10px;">Mesačný limit (€)</p>
+        <input type="number" id="set-budget-limit" onchange="updateLimit(this.value)">
+    </div>
+    <button class="btn-pill" style="background: none; color: var(--red); border: 1px solid var(--red);" onclick="resetAll()">VYMAZAŤ VŠETKO</button>
+</div>
+
+<!-- MODAL: PICKER -->
+<div id="modal-picker" class="modal" onclick="if(event.target==this)closeModal()">
+    <div class="modal-content">
+        <h3 id="modal-title" style="margin-bottom: 1rem;">Čo budeme variť?</h3>
+        <input type="text" id="m-search" placeholder="Hľadať recept..." oninput="filterMeals()">
+        <div id="m-results"></div>
+    </div>
+</div>
+
+<!-- MODAL: INGREDIENTS LEARN -->
+<div id="modal-learn" class="modal">
+    <div class="modal-content">
+        <h3 style="margin-bottom: 0.5rem;">Nové jedlo! 🎓</h3>
+        <p style="font-size: 0.8rem; color: var(--text-dim); margin-bottom: 1rem;">Aké ingrediencie potrebujeme na toto jedlo? (oddeľte čiarkou)</p>
+        <input type="text" id="learn-ings" placeholder="napr. kura, ryža, cibuľa">
+        <button class="btn-pill" onclick="saveNewMealIngredients()">ULOŽIŤ RECEPT</button>
+    </div>
+</div>
+
+<!-- NAV BAR -->
+<nav class="nav-bar glass">
+    <a href="javascript:void(0)" class="nav-item active" id="nav-dash" onclick="tab('dash', this)"><i>🏠</i>Domov</a>
+    <a href="javascript:void(0)" class="nav-item" id="nav-plan" onclick="tab('planner', this)"><i>📅</i>Plán</a>
+    <a href="javascript:void(0)" class="nav-item" id="nav-shop" onclick="tab('shop', this)"><i>🛒</i>Nákup</a>
+    <a href="javascript:void(0)" class="nav-item" id="nav-set" onclick="tab('settings', this)"><i>⚙️</i>Viac</a>
+</nav>
+
+<script>
+/* --- MASÍVNA DATABÁZA (~30 JEDÁL) --- */
+const MEAL_DB = {
+    "Pečené kura": ["kura", "ryža", "cibuľa"],
+    "Špagety Bolognese": ["mleté mäso", "cestoviny", "paradajky"],
+    "Hubové rizoto": ["ryža", "šampiňóny", "smotana"],
+    "Losos so zemiakmi": ["losos", "zemiaky", "citrón"],
+    "Halušky s bryndzou": ["zemiaky", "múka", "bryndza", "slanina"],
+    "Segedínsky guláš": ["bravčové mäso", "kapusta", "smotana", "knedľa"],
+    "Sviečková": ["hovädzie mäso", "mrkva", "smotana", "knedľa"],
+    "Rajčinová polievka": ["rajčinový pretlak", "syr", "cestoviny"],
+    "Kurací vývar": ["kuracie mäso", "mrkva", "petržlen", "rezance"],
+    "Palacinky": ["múka", "mlieko", "vajíčka", "džem"],
+    "Dukátové buchtičky": ["múka", "mlieko", "puding", "cukor"],
+    "Vajíčka na mäkko": ["vajíčka", "chlieb", "maslo"],
+    "Ovsená kaša": ["ovsené vločky", "mlieko", "ovocie"],
+    "Lievance": ["múka", "kefír", "vajíčka", "javorový sirup"],
+    "Toast so šunkou": ["toustový chlieb", "šunka", "syr"],
+    "Cézar šalát": ["kuracie prsia", "šalát", "parmezán", "krutóny"],
+    "Pizza domáca": ["múka", "droždie", "paradajky", "mozzarella"],
+    "Gnocchi so špenátom": ["gnocchi", "špenát", "smotana", "cesnak"],
+    "Kuracie soté": ["kuracie prsia", "ryža", "kukurica"],
+    "Vyprážaný rezeň": ["mäso", "strúhanka", "múka", "vajíčka", "zemiaky"]
+};
+
+const MEAL_LABELS = ['Raňajky', 'Desiata', 'Obed', 'Olovrant', 'Večera'];
+
+let S = JSON.parse(localStorage.getItem('fw_vFinal_v1')) || {
+  user: "", planR: {}, planB: {}, tasks: [], budget: 0, budgetLimit: 400,
+  theme: "dark", accent: "#FF6B35", fontSize: 15, mode: "rodina",
+  learnedMeals: {} // Tu ukladáme ingrediencie pre nové jedlá
+};
+
+function save() { localStorage.setItem('fw_vFinal_v1', JSON.stringify(S)); }
+
+/* --- CORE NAVIGATION --- */
+function tab(id, btn) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById('scr-' + id).classList.add('active');
+    document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+    if(btn) btn.classList.add('active'); else document.getElementById('nav-'+(id==='settings'?'set':id)).classList.add('active');
+    if(id === 'dash') updateDash();
+    if(id === 'planner') renderPlanner();
+    if(id === 'shop') renderShop();
+}
+
+/* --- DASHBOARD LOGIC --- */
+function updateDash() {
+    const now = new Date();
+    document.getElementById('txt-date').innerText = now.toLocaleDateString('sk-SK', {weekday: 'long', day: 'numeric', month: 'long'});
+    document.getElementById('txt-welcome').innerText = `Ahojte, ${S.user}! 👋`;
+    
+    const dayIdx = (now.getDay() + 6) % 7;
+    const hour = now.getHours();
+    let slot = 2; // Default obed
+    if(hour < 10) slot = 0; else if(hour < 12) slot = 1; else if(hour > 18) slot = 4;
+    
+    const meal = (S.planR[dayIdx + '_' + slot]) || "Nič v pláne";
+    document.getElementById('dash-meal').innerText = `${MEAL_LABELS[slot]}: ${meal}`;
+    
+    document.getElementById('dash-budget').innerText = `${S.budget}€ / ${S.budgetLimit}€`;
+    document.getElementById('budget-fill').style.width = Math.min((S.budget/S.budgetLimit)*100, 100) + '%';
+    
+    renderDashTasks();
+}
+
+function addExpense() {
+    const val = prompt("Zadajte sumu nákupu v €:", "");
+    if(val && !isNaN(val)) {
+        S.budget += parseFloat(val);
+        save(); updateDash();
+    }
+}
+
+function renderDashTasks() {
+    const cont = document.getElementById('dash-tasks');
+    const openTasks = S.tasks.filter(t => !t.d).slice(0, 2);
+    cont.innerHTML = openTasks.length === 0 ? `<p style="color:var(--text-dim); font-size:0.75rem; padding:10px;">Všetko hotové! 🎉</p>` :
+    openTasks.map(t => `<div class="row-item" onclick="completeTask(${t.id})"><span>${t.t}</span><div style="width:18px; height:18px; border:2px solid var(--acc); border-radius:4px;"></div></div>`).join('');
+}
+function completeTask(id) { S.tasks.find(x => x.id === id).d = true; save(); updateDash(); }
+
+/* --- PLANNER LOGIC --- */
+let curD, curM, pendingMealName;
+function renderPlanner() {
+    const cont = document.getElementById('planner-list');
+    const days = ['Pondelok','Utorok','Streda','Štvrtok','Piatok','Sobota','Nedeľa'];
+    const today = (new Date().getDay() + 6) % 7;
+    const plan = S.mode === 'rodina' ? S.planR : S.planB;
+
+    cont.innerHTML = days.map((d, i) => `
+        <div class="day-card" id="day-${i}">
+            <div class="day-header" onclick="toggleDay(${i})">
+                <div>
+                    <b style="font-size:0.85rem;">${d} ${i === today ? '•' : ''}</b>
+                    <div style="font-size:0.7rem; color:var(--text-dim);">${plan[i+'_2'] || 'Bez obeda'}</div>
+                </div>
+                <span>▼</span>
+            </div>
+            <div class="day-body">
+                ${MEAL_LABELS.map((lbl, mi) => `
+                    <div class="meal-row" onclick="openPicker(${i}, ${mi})">
+                        <span style="font-size:0.65rem; font-weight:800; color:var(--acc); opacity:0.7;">${lbl}</span>
+                        <span style="font-size:0.85rem; font-weight:600;">${plan[i+'_'+mi] || '---'}</span>
+                    </div>`).join('')}
+            </div>
+        </div>`).join('');
+}
+
+function toggleDay(i) {
+    const el = document.getElementById('day-'+i);
+    const wasOpen = el.classList.contains('open');
+    document.querySelectorAll('.day-card').forEach(c => c.classList.remove('open'));
+    if(!wasOpen) el.classList.add('open');
+}
+
+function openPicker(d, m) { curD = d; curM = m; document.getElementById('modal-picker').style.display = 'flex'; filterMeals(); }
+function closeModal() { document.querySelectorAll('.modal').forEach(m => m.style.display = 'none'); }
+
+function filterMeals() {
+    const q = document.getElementById('m-search').value.toLowerCase();
+    const matches = Object.keys(MEAL_DB).filter(m => m.toLowerCase().includes(q));
+    document.getElementById('m-results').innerHTML = matches.map(m => `<div class="row-item" onclick="selectMeal('${m}')"><b>${m}</b></div>`).join('');
+    if(q && matches.length === 0) document.getElementById('m-results').innerHTML = `<button class="btn-pill" onclick="selectMeal('${document.getElementById('m-search').value}')">Pridať: ${document.getElementById('m-search').value}</button>`;
+}
+
+function selectMeal(n) {
+    pendingMealName = n;
+    // Ak jedlo nepoznáme (nie je v DB ani v naučených), spýtaj sa na ingrediencie
+    if(!MEAL_DB[n] && !S.learnedMeals[n]) {
+        document.getElementById('modal-learn').style.display = 'flex';
+    } else {
+        finishSelectingMeal(n);
+    }
+}
+
+function saveNewMealIngredients() {
+    const ings = document.getElementById('learn-ings').value.split(',').map(i => i.trim());
+    if(ings.length > 0) {
+        S.learnedMeals[pendingMealName] = ings;
+        finishSelectingMeal(pendingMealName);
+        document.getElementById('learn-ings').value = "";
+    }
+}
+
+function finishSelectingMeal(n) {
+    const plan = S.mode === 'rodina' ? S.planR : S.planB;
+    plan[curD + '_' + curM] = n;
+    save(); closeModal(); renderPlanner();
+}
+
+/* --- SHOPPING LOGIC --- */
+function renderShop() {
+    const cont = document.getElementById('shop-container');
+    let needed = new Set();
+    
+    [S.planR, S.planB].forEach(plan => {
+        Object.values(plan).forEach(name => {
+            const ings = MEAL_DB[name] || S.learnedMeals[name];
+            if(ings) ings.forEach(i => needed.add(i));
+        });
+    });
+    
+    if(needed.size === 0) {
+        cont.innerHTML = `<p style="text-align:center; padding:3rem; color:var(--text-dim);">Prázdno.</p>`;
+        return;
+    }
+    cont.innerHTML = Array.from(needed).map(item => `<div class="row-item"><span>${item}</span><input type="checkbox" style="width:20px; height:20px; accent-color:var(--acc);"></div>`).join('');
+}
+
+/* --- SYSTEM --- */
+function updateLimit(v) { S.budgetLimit = v; save(); updateDash(); }
+function setMode(m) { 
+    S.mode = m; 
+    document.getElementById('m-rodina').style.background = m==='rodina'?S.accent:'none';
+    document.getElementById('m-baby').style.background = m==='baby'?S.accent:'none';
+    renderPlanner(); 
+}
+function finishOnboarding() {
+    const val = document.getElementById('ob-name').value.trim();
+    if(val) { S.user = val; save(); document.getElementById('onboarding').style.display='none'; init(); }
+}
+function init() {
+    if(!S.user) { document.getElementById('onboarding').style.display='flex'; }
+    else { 
+        document.documentElement.style.setProperty('--acc', S.accent);
+        document.getElementById('set-budget-limit').value = S.budgetLimit;
+        updateDash(); setMode(S.mode); 
+    }
+}
+function resetAll() { if(confirm("Zmazať všetko?")) { localStorage.clear(); location.reload(); } }
+
+window.onload = init;
+</script>
+</body>
+</html>
